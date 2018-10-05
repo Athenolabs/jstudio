@@ -4,7 +4,9 @@ import six
 import json
 import frappe
 import frappe.model
+from frappe.utils import cstr
 from dukpy.evaljs import JSInterpreter
+from dukpy._dukpy import JSRuntimeError
 from collections import defaultdict
 
 tree = lambda : defaultdict(tree)
@@ -63,8 +65,8 @@ class JSInterpreter(JSInterpreter):
 					continue
 				JS_GLOBALS_PART = JS_GLOBALS_PART.replace('"{' + rk + '}"', v)
 		JS_GLOBALS.append(JS_GLOBALS_PART)
+		frappe.msgprint('<pre>{0}</pre>'.format('\n'.join(JS_GLOBALS)))
 		self.evaljs('\n'.join(JS_GLOBALS))
-		#frappe.msgprint('<pre>{}</pre>'.format('\n'.join(JS_GLOBALS)))
 
 	def _call_python(self, func, json_args):
 		func = func.decode('utf-8')
@@ -118,8 +120,13 @@ def run_action(action, context={}, kwargs={}):
 	doc = dukpy.doc;
 	delete dukpy;
 	""", context=context, kwargs=kwargs, doc=doc)
-	jsi.evaljs(frappe.db.get_value('Action', action, 'code'))
-
+	try:
+		ret = jsi.evaljs(frappe.db.get_value('Action', action, 'code'))
+	except JSRuntimeError as e:
+		msg = e.message.splitlines()
+	else:
+		new_ctx, new_doc = jsi.evaljs('[ctx, doc];')
+		return new_doc, ret
 
 
 @frappe.whitelist()
@@ -131,8 +138,9 @@ def get_field_options(doctype):
 	], key=lambda f: f['label'])
 
 
-def run_event(event, doc, handler=None):
-	if not frappe.flags.on_import:
+def run_event(doc, event):
+	"""Method handler for any event"""
+	if not (frappe.flags.on_import or getattr(getattr(doc, 'flags', frappe._dict()), 'ignore_{}'.format(event), False)):
 		if isinstance(doc, six.string_types):
 			doc = json.loads(doc, object_pairs_hook=frappe._dict)
 		event_name = " ".join(event.split("_")).title()
@@ -141,52 +149,3 @@ def run_event(event, doc, handler=None):
 			'event': event_name}):
 			if not action.run_when or evaluate_js(action.run_when, {'doc': doc}):
 				run_action(action, {'doc': doc, 'event': event_name})
-
-
-def run_onload_event(doc, handler=None):
-	run_event('onload', doc, handler=handler)
-
-def run_autoname_event(doc, handler=None):
-	run_event('autoname', doc, handler=handler)
-
-def run_validate_event(doc, handler=None):
-	run_event('validate', doc, handler=handler)
-
-def run_before_save_event(doc, handler=None):
-	run_event('before_save', doc, handler=handler)
-
-def run_after_save_event(doc, handler=None):
-	run_event('after_save', doc, handler=handler)
-
-def run_before_insert_event(doc, handler=None):
-	run_event('before_insert', doc, handler=handler)
-
-def run_after_insert_event(doc, handler=None):
-	run_event('after_insert', doc, handler=handler)
-
-def run_before_submit_event(doc, handler=None):
-	run_event('before_submit', doc, handler=handler)
-
-def run_after_submit_event(doc, handler=None):
-	run_event('after_submit', doc, handler=handler)
-
-def run_on_update_event(doc, handler=None):
-	run_event('on_update', doc, handler=handler)
-
-def run_on_submit_event(doc, handler=None):
-	run_event('on_submit', doc, handler=handler)
-
-def run_on_cancel_event(doc, handler=None):
-	run_event('on_cancel', doc, handler=handler)
-
-def run_update_after_submit(doc, handler=None):
-	run_event('on_update_after_submit', doc, handler=handler)
-
-def run_on_change_event(doc, handler=None):
-	run_event('on_change', doc, handler=handler)
-
-def run_on_trash_event(doc, handler=None):
-	run_event('on_trash', doc, handler=handler)
-
-def run_on_after_delete_event(doc, handler=None):
-	run_event('after_delete', doc, handler=handler)

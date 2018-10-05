@@ -23,7 +23,6 @@ def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
 def user():
 	return getattr(frappe.local, "session", None) and frappe.local.session.user or "Guest"
 
-
 def get_value(*args, **kwargs):
 	return frappe.db.get_value(*args, **kwargs)
 
@@ -73,3 +72,8 @@ def web(method, url, kwargs={}):
 				res.pop(k)
 	return json.loads(frappe.as_json(res))
 	
+def get_doc(*args, **kwargs):
+	return json.loads(frappe.get_doc(*args, **kwargs).as_json())
+
+def call(method, arguments):
+	return json.loads(frappe.as_json(frappe.call(method, arguments)))
