@@ -3,8 +3,9 @@
 import six
 import json
 import frappe
+import datetime
 import frappe.model
-from frappe.utils import cstr
+from frappe.utils import cstr, cint
 from dukpy.evaljs import JSInterpreter
 from dukpy._dukpy import JSRuntimeError
 from collections import defaultdict
@@ -65,7 +66,7 @@ class JSInterpreter(JSInterpreter):
 					continue
 				JS_GLOBALS_PART = JS_GLOBALS_PART.replace('"{' + rk + '}"', v)
 		JS_GLOBALS.append(JS_GLOBALS_PART)
-		frappe.msgprint('<pre>{0}</pre>'.format('\n'.join(JS_GLOBALS)))
+		#frappe.msgprint('<pre>{0}</pre>'.format('\n'.join(JS_GLOBALS)))
 		self.evaljs('\n'.join(JS_GLOBALS))
 
 	def _call_python(self, func, json_args):
@@ -78,7 +79,7 @@ class JSInterpreter(JSInterpreter):
 			return json.dumps(ret).encode('utf-8')
 
 
-def evaluate_js(js, context={}, kwargs={}):
+def evaluate_js(js, context={}, kwargs={}, default_context=True, context_processor=None):
 	if isinstance(context, six.string_types):
 		context = json.loads(context)
 	if 'doc' in context:
@@ -89,13 +90,20 @@ def evaluate_js(js, context={}, kwargs={}):
 		kwargs = json.loads(kwargs)
 
 	jsi = JSInterpreter()
+
+	if default_context:
+		# build the standard context if none provided
 	
-	jsi.evaljs("""
-	ctx = dukpy.context;
-	kwargs = dukpy.kwargs;
-	doc = dukpy.doc;
-	delete dukpy;
-	""", context=context, kwargs=kwargs, doc=doc)
+		jsi.evaljs("""
+		ctx = dukpy.context;
+		kwargs = dukpy.kwargs;
+		doc = dukpy.doc;
+		delete dukpy;
+		""", context=context, kwargs=kwargs, doc=doc)
+	
+	if callable(context_processor):
+		context_processor(jsi)
+	
 	return jsi.evaljs(js)
 
 
@@ -120,13 +128,92 @@ def run_action(action, context={}, kwargs={}):
 	doc = dukpy.doc;
 	delete dukpy;
 	""", context=context, kwargs=kwargs, doc=doc)
-	try:
-		ret = jsi.evaljs(frappe.db.get_value('Action', action, 'code'))
-	except JSRuntimeError as e:
-		msg = e.message.splitlines()
+
+	ret = jsi.evaljs(frappe.db.get_value('Action', action, 'code'))
+	new_ctx, new_doc = jsi.evaljs('[ctx, doc];')
+	return new_doc, ret
+
+
+@frappe.whitelist()
+@frappe.read_only()
+def query_report_run(report_name, filters=None, user=None):
+	from frappe.desk.query_report import (
+		get_report_doc,
+		get_prepared_report_result,
+		generate_report_result,
+		get_filtered_data,
+		add_total_row
+	)
+
+	report = get_report_doc(report_name)
+	if not user:
+		user = frappe.session.user
+	if not frappe.has_permission(report.ref_doctype, "report"):
+		frappe.msgprint(frappe._("Must have report permission to access this report.",
+								 raise_exception=True))
+
+	result = None
+	if report.prepared_report:
+		if filters:
+			if isinstance(filters, six.string_types):
+				filters = json.loads(filters)
+			
+			dn = filters.get('prepared_report_name')
+		else:
+			dn = ''
+		result = get_prepared_report_result(report, filters, dn)
+	elif report.backend_js:
+		threshold = 10
+		res = []
+		start_time = datetime.datetime.now()
+		# The JOB
+		def context_processor(jsi):
+			jsi.evaljs('''
+			var columns = [],
+			    data = [],
+				message = null,
+				chart = [],
+				data_to_be_printed = [];
+			''')	
+		
+		res = evaluate_js(
+			report.backend_js + '\n;[columns,data,message,chart,data_to_be_printed]', 
+			default_context=False, 
+			context_processor=context_processor)
+		frappe.msgprint('<pre>{0}</pre>'.format(frappe.as_json(res)))
+		end_time = datetime.datetime.now()
+		if (end_time - start_time).seconds > threshold and not report.prepared_report:
+			report.db_set('prepared_report', 1)
+
+		message, chart, data_to_be_printed = None, None, None
+		columns, result = res[0], res[1]
+		if len(res) > 2:
+			message = res[2]
+		if len(res) > 3:
+			chart = res[3]
+		if len(res) > 4:
+			data_to_be_printed = res[4]
+
+		if result:
+			result = get_filtered_data(report.ref_doctype, columns, result, user)
+		
+		if cint(report.add_total_row) and result:
+			result = add_total_row(result, columns)
+
+		result = {
+			'result': result,
+			'columns': columns,
+			'message': message,
+			'chart': chart,
+			'data_to_be_printed': data_to_be_printed,
+			'status': None
+		}
+		
+
 	else:
-		new_ctx, new_doc = jsi.evaljs('[ctx, doc];')
-		return new_doc, ret
+		result = generate_report_result(report, filters, user)
+
+	return result
 
 
 @frappe.whitelist()
@@ -149,3 +236,36 @@ def run_event(doc, event):
 			'event': event_name}):
 			if not action.run_when or evaluate_js(action.run_when, {'doc': doc}):
 				run_action(action, {'doc': doc, 'event': event_name})
+
+
+@frappe.whitelist()
+def get_action_list(dt):
+	actions = frappe.get_all(
+		"Action Form Binding", 
+		fields=["parent", "menu_label", "menu_group", "depends_on"],
+		filters={
+			'dt': dt
+		},
+		order_by='idx ASC',
+		limit_page_length=20
+	)
+
+	for action in actions:
+		action['arguments'] = frappe.get_all(
+			'Action Argument',
+			fields=['label', 'argtype', 'argname', 'required', 'collapsible', 
+					'collapsible_when', 'options', 'default', 'depends_on'],
+			filters={
+				'dt': dt
+			},
+			order_by='idx ASc'
+		)
+		action['mappings'] = frappe.get_all(
+			'Action Mapping',
+			fields=['field', 'value_processor'],
+			filters={
+				'dt': dt
+			},
+			order_by='idx ASC'
+		)
+	return actions

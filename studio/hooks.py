@@ -16,7 +16,7 @@ app_license = "MIT"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/studio/css/studio.css"
-# app_include_js = "/assets/studio/js/studio.js"
+app_include_js = "/assets/studio/js/studio.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/studio/css/studio.css"
@@ -130,9 +130,9 @@ doc_events = {
 # Overriding Whitelisted Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "studio.event.get_events"
-# }
+override_whitelisted_methods = {
+ 	'frappe.desk.query_report.run': 'studio.api.query_report_run'
+}
 
 studio_functions = [
 	'frappe._',
