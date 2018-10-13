@@ -104,23 +104,41 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"studio.tasks.all"
-# 	],
-# 	"daily": [
-# 		"studio.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"studio.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"studio.tasks.weekly"
-# 	]
-# 	"monthly": [
-# 		"studio.tasks.monthly"
-# 	]
-# }
+scheduler_events = {
+	"all": [
+		"studio.tasks.all"
+	],
+	"daily": [
+		"studio.tasks.daily"
+	],
+	"daily_long": [
+		"studio.tasks.daily_long"
+	],
+	"hourly": [
+		"studio.tasks.hourly"
+	],
+	"hourly_long": [
+		"studio.tasks.hourly_long"
+	],
+	"midnight": [
+		"studio.tasks.midnight"
+	],
+	"weekly": [
+		"studio.tasks.weekly"
+	],
+	"weekly_long": [
+		"studio.tasks.weekly_long"
+	],
+	"monthly": [
+		"studio.tasks.monthly"
+ 	],
+	"monthly_long": [
+		"studio.tasks.monthly_long"
+	],
+	"yearly": [
+		"studio.tasks.monthly"
+	]
+}
 
 # Testing
 # -------

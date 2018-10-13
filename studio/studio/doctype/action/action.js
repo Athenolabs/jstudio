@@ -2,16 +2,7 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('Action', {
-	on_load_post_render: (frm) => {
-		frm.set_query('dt', 'mappings', (doc) => {
-			return {
-				'filters': {
-					'istable': ["!=", 1], 
-					'issingle':["!=", 1], 
-					'module': ['!=', 'Core']
-				}
-			}
-		});
+	onload_post_render: (frm) => {
 		frm.set_query('dt', 'bindings', (doc) => {
 			return {
 				'filters': {
@@ -21,13 +12,32 @@ frappe.ui.form.on('Action', {
 				}
 			}
 		});
+		frm.set_query('dt', 'mappings', (doc) => {
+			return {
+				'filters': {
+					'istable': ["!=", 1], 
+					'issingle':["!=", 1], 
+					'module': ['!=', 'Core'],
+					'name': ['in', frm.doc.bindings.map(function(d){ return d.dt; })]
+				}
+			}
+		});
 		frm.set_query('dt', 'triggers', (doc) => {
 			return {
 				'filters': {
 					'istable': ["!=", 1], 
 					'issingle':["!=", 1], 
-					'module': ['!=', 'Core']
+					'module': ['!=', 'Core'],
+					'name': ['in', frm.doc.bindings.map(function(d){ return d.dt; })]
 				}
+			}
+		});
+		$(frm.wrapper).on('grid-row-render', function(e, grid_row){
+			if (grid_row.doc.doctype === "Action Mapping"){
+				var df = frappe.utils.filter_dict(grid_row.docfields, {'fieldname': 'argument'})[0]; 
+				df.options = [null].concat(frm.doc.arguments.map(function(d){
+					return {'value': d.argname, 'label': __(d.label)};
+				}));
 			}
 		});
 	},
@@ -101,7 +111,7 @@ frappe.ui.form.on('Action Argument', 'label', function(frm, cdt, cdn){
 });
 
 frappe.ui.form.on('Action Mapping', 'dt', function(frm, cdt, cdn){
-	var d = locals[cdt][cdn], options = [null];
+	var d = locals[cdt][cdn], options = [];
 	if (!d.dt) return;
 	frappe.call({
 		'method': 'studio.api.get_field_options',
