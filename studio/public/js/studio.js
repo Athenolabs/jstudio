@@ -28,17 +28,17 @@ studio.evaluate_value_processor = function(processor, doc){
 }
 
 studio.inflate_args = function(frm, mappings, args){
-	mappings.forEach(function(m){
+	(mappings || []).forEach(function(m){
 		if (m.field.indexOf('.') === -1 && typeof(args[mappings]) === 'undefined' && typeof (frm.doc[m.field])!== 'undefined'){
 			if (m.value_processor){
-				args[m.field] = studio.evaluate_value_processor(m.value_processor, frm.doc);
+				args[m.argument] = studio.evaluate_value_processor(m.value_processor, frm.doc);
 			} else {
-				args[m.field] = frm.doc[m.field];
+				args[m.argument] = frm.doc[m.fieldname];
 			}
 		} else if (m.field.indexOf('.') > 0 ){
 			var parts = m.field.split('.');
 			if (!m.value_processor){
-				args[m.field] = frm.doc[parts[0]].map(function(r){
+				args[m.argument] = frm.doc[parts[0]].map(function(r){
 					return r[parts[1]];
 				});
 			} else {
@@ -86,7 +86,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 											
 											if (!with_dialog){
 												frappe.confirm(
-													frappe.utils.format(__('You wanna call the action {0} ?'), [__(row.menu_label)]),
+													frappe.utils.format(__('You want to call the action {0} ?'), [__(row.menu_label)]),
 													function(){
 														var args = {};
 														studio.inflate_args(cur_frm.doc, res.message['mappings'], args);
@@ -99,12 +99,18 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 																},
 																'kwargs': args
 															},
-															freeze: true
+															freeze: true,
+															'callback': function(res){
+																if (res.message && res.message.docs){
+																	frappe.model.sync(res.message);
+																	frm.refresh();
+																}
+															},
 														});
 													}
 												);
 											} else {
-												frappe.prompt(
+												var d = frappe.prompt(
 													fields,
 													function(args){
 														studio.inflate_args(cur_frm.doc, res.message['mappings'], args);
@@ -117,12 +123,24 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 																},
 																'kwargs': args
 															},
-															freeze: true
+															freeze: true,
+															'callback': function(res){
+																if (res.message && res.message.docs){
+																	frappe.model.sync(res.message);
+																	frm.refresh();
+																}
+															},
 														});
 														frappe.utils.format(__('Run Action {0}'), [row.menu_label]),
 														__('Run')
 													}
-												)
+												), props = studio.inflate_args(cur_frm.doc, res.message['mappings'], {});
+												Object.keys(props).forEach(function(k){
+													var v = props[k];
+													if (!Array.isArray(v)){
+														d.set_value(k, v);
+													}
+												});
 											}
 										},
 										__(row.menu_group)

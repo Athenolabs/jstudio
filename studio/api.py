@@ -1,8 +1,10 @@
 #-*- coding: utf-8 -*-
 
+import copy
 import six
 import json
 import frappe
+import inspect
 import datetime
 import frappe.model
 from frappe.utils import cstr, cint
@@ -14,10 +16,31 @@ tree = lambda : defaultdict(tree)
 
 def get_attr(attr):
 	try:
-		return frappe.get_attr(attr)
+		obj = frappe.get_attr(attr)
+		return obj, inspect.ismodule(obj)
 	except (AttributeError, frappe.AppNotInstalledError, frappe.ValidationError):
 		frappe.clear_messages()
-		return frappe.get_module(attr)
+		obj = frappe.get_module(attr)
+		return obj, inspect.ismodule(obj)
+
+def deep_update(target, source):
+	"""
+	Deep update target dict with src
+	For each k,v in source: if k doesn't exists in target, it is deep copied from
+		source to target. Otherwhise, if v is a list, target[k] is replaced by source[k].
+	"""
+
+	for k, v in source.items():
+		if isinstance(v, list):
+			target[k] = copy.deepcopy(v)
+		else:
+			target[k] = copy.copy(v)
+
+
+def is_module_function(module):
+	def wrapped(obj):
+		return inspect.isfunction(obj) and (not obj.__module__ or obj.__module__.startswith(module))
+	return wrapped
 
 
 class JSInterpreter(JSInterpreter):
@@ -34,27 +57,63 @@ class JSInterpreter(JSInterpreter):
 		_gbl = tree()
 		replacements = {}
 		for attr in frappe.get_hooks('studio_functions', []):
+			paths = []
 			if isinstance(attr, dict):
 				for key, value in attr.items():
-					path = key
-					self.export_function(key, get_attr(value))
+					attr, expand = get_attr(value)
+					if not expand:
+						paths.append(key)
+						self.export_function(key, attr)
+					else:
+						base_path = key
+						for fn, item in inspect.getmembers(attr, is_module_function(base_path)):
+							key = '{0}.{1}'.format(base_path, fn)
+							self.export_function(key, item)
+							paths.append(key)
+
 			elif isinstance(attr, (list, tuple, set)):
 				raise frappe.ValidationError('Invalid hook format {}, should be ("list" or "dict") not "{}"'.format(
 					frappe.as_json(list(attr)), type(attr).__name__
 				))
 			else:
-				path = attr
-				self.export_function(attr, get_attr(attr))
+				obj, expand = get_attr(attr)
+				
+				if not expand:
+					paths.append(attr)
+					self.export_function(attr, obj)
+				else:	
+					base_path = attr
+					for fn, item in inspect.getmembers(obj, is_module_function(base_path)):
+						attr = '{0}.{1}'.format(base_path, fn)
+						self.export_function(key, item)
+						paths.append(attr)
 			
-			self.evaljs('''function as_list(a){ var args = []; for(var i = 0; i < a.length; i++){ args.push(a[i]); } return args; }''')
+			for path in paths:
+				parts = path.split('.')
+				fn = parts.pop()
+				actual = None
+				for part in parts:
+					actual = (actual or _gbl)[part]
+				actual[fn] = '{{{0}}}'.format(path.replace('.', '_'))
+				replacements[path.replace('.', '_')] = '''function() {{ return call_python("{0}", as_list(arguments)); }}'''.format(path)
 
-			parts = path.split('.')
-			fn = parts.pop()
-			actual = None
-			for part in parts:
-				actual = (actual or _gbl)[part]
-			actual[fn] = '{{{0}}}'.format(path.replace('.', '_'))
-			replacements[path.replace('.', '_')] = '''function() {{ return call_python("{0}", as_list(arguments)); }}'''.format(path)
+		self.evaljs('''
+			function as_list(a){ var args = []; for(var i = 0; i < a.length; i++){ args.push(a[i]); } return args; }
+			function enable_document_syncronization(){ ctx.enabled_document_syncronization = true; }
+			function disable_document_syncronization(){ ctx.enabled_document_syncronization = false; }
+			function add_child(field, child){
+				if (!ctx.enabled_document_syncronization) return;
+				var df = frappe.utils.filter_dict(ctx.meta.fields, {'fieldname': field, 'fieldtype': 'Table'});
+				if (!df) return;
+				df = df[0];
+				if (!Array.isArray(doc[df.fieldname])) doc[df.fieldname] = [];
+				if (!child.doctype) child.doctype = df.options;
+				if (!child.parenttype) child.parenttype = doc.doctype;
+				if (!child.paerentfield) child.parentfield = df.fieldname;
+				doc[df.fieldname].push(child);
+			}
+		''')
+
 
 		JS_GLOBALS = []
 		
@@ -111,10 +170,10 @@ def evaluate_js(js, context={}, kwargs={}, default_context=True, context_process
 def run_action(action, context={}, kwargs={}):
 	if isinstance(context, six.string_types):
 		context = json.loads(context)
-	if 'doc' in context:
+	if context.get('doc'):
 		doc = context.pop('doc')
-		if hasattr(doc, 'as_json'):
-			doc = json.loads(doc.as_json())
+		meta = frappe.get_meta(doc['doctype'])
+		context['meta'] = json.loads(meta.as_json())
 	else:
 		doc = {}
 	if isinstance(kwargs, six.string_types):
@@ -131,8 +190,23 @@ def run_action(action, context={}, kwargs={}):
 
 	ret = jsi.evaljs(frappe.db.get_value('Action', action, 'code'))
 	new_ctx, new_doc = jsi.evaljs('[ctx, doc];')
+	if new_ctx.get('enabled_document_syncronization'):
+		return {
+			'docs': [json.loads(frappe.get_doc(new_doc).as_json())]
+		}
 	return new_doc, ret
 
+@frappe.whitelist()
+def get_functions_help():
+	import pydoc
+
+	ret = []
+	jsi = JSInterpreter()
+
+	for k in sorted(jsi._funcs.keys()):
+		ret.append(jsi, pydoc.getdoc(jsi._funcs[k]))
+
+	return ret
 
 @frappe.whitelist()
 @frappe.read_only()
@@ -173,14 +247,15 @@ def query_report_run(report_name, filters=None, user=None):
 			    data = [],
 				message = null,
 				chart = [],
-				data_to_be_printed = [];
-			''')	
+				data_to_be_printed = [],
+				filters = dukpy.filters || {};
+			delete dukpy;
+			''')
 		
 		res = evaluate_js(
 			report.backend_js + '\n;[columns,data,message,chart,data_to_be_printed]', 
 			default_context=False, 
 			context_processor=context_processor)
-		frappe.msgprint('<pre>{0}</pre>'.format(frappe.as_json(res)))
 		end_time = datetime.datetime.now()
 		if (end_time - start_time).seconds > threshold and not report.prepared_report:
 			report.db_set('prepared_report', 1)
@@ -214,6 +289,61 @@ def query_report_run(report_name, filters=None, user=None):
 		result = generate_report_result(report, filters, user)
 
 	return result
+
+@frappe.whitelist()
+def export_query_report():
+	"""export from query reports"""
+	from frappe.desk.query_report import get_columns_dict
+
+	data = frappe._dict(frappe.local.form_dict)
+
+	del data["cmd"]
+	if "csrf_token" in data:
+		del data["csrf_token"]
+
+	if isinstance(data.get("filters"), six.string_types):
+		filters = json.loads(data["filters"])
+	if isinstance(data.get("report_name"), six.string_types):
+		report_name = data["report_name"]
+	if isinstance(data.get("file_format_type"), six.string_types):
+		file_format_type = data["file_format_type"]
+	if isinstance(data.get("visible_idx"), six.string_types):
+		visible_idx = json.loads(data.get("visible_idx"))
+	else:
+		visible_idx = None
+
+	if file_format_type == "Excel":
+
+		data = query_report_run(report_name, filters)
+		data = frappe._dict(data)
+		columns = get_columns_dict(data.columns)
+
+		result = [[]]
+
+		# add column headings
+		for idx in range(len(data.columns)):
+			result[0].append(columns[idx]["label"])
+
+		# build table from dict
+		if isinstance(data.result[0], dict):
+			for i,row in enumerate(data.result):
+				# only rows which are visible in the report
+				if row and (i in visible_idx):
+					row_list = []
+					for idx in range(len(data.columns)):
+						row_list.append(row.get(columns[idx]["fieldname"],""))
+					result.append(row_list)
+				elif not row:
+					result.append([])
+		else:
+			result = result + [d for i,d in enumerate(data.result) if (i in visible_idx)]
+
+		from frappe.utils.xlsxutils import make_xlsx
+		xlsx_file = make_xlsx(result, "Query Report")
+
+		frappe.response['filename'] = report_name + '.xlsx'
+		frappe.response['filecontent'] = xlsx_file.getvalue()
+		frappe.response['type'] = 'binary'
 
 
 @frappe.whitelist()
@@ -254,15 +384,15 @@ def get_action_list(dt):
 		action['arguments'] = frappe.get_all(
 			'Action Argument',
 			fields=['label', 'argtype', 'argname', 'required', 'collapsible', 
-					'collapsible_when', 'options', 'default', 'depends_on'],
+					'collapsible_when', 'options', '`default`', 'depends_on'],
 			filters={
-				'dt': dt
+				'parent': action.parent
 			},
-			order_by='idx ASc'
+			order_by='idx ASC'
 		)
 		action['mappings'] = frappe.get_all(
 			'Action Mapping',
-			fields=['field', 'value_processor'],
+			fields=['argument', 'fieldname', 'value_processor'],
 			filters={
 				'dt': dt
 			},

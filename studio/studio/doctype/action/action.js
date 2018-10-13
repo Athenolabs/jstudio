@@ -6,8 +6,8 @@ frappe.ui.form.on('Action', {
 		frm.set_query('dt', 'mappings', (doc) => {
 			return {
 				'filters': {
-					'istable': 0, 
-					'issingle': 0, 
+					'istable': ["!=", 1], 
+					'issingle':["!=", 1], 
 					'module': ['!=', 'Core']
 				}
 			}
@@ -15,8 +15,8 @@ frappe.ui.form.on('Action', {
 		frm.set_query('dt', 'bindings', (doc) => {
 			return {
 				'filters': {
-					'istable': 0, 
-					'issingle': 0, 
+					'istable': ["!=", 1], 
+					'issingle':["!=", 1], 
 					'module': ['!=', 'Core']
 				}
 			}
@@ -24,8 +24,8 @@ frappe.ui.form.on('Action', {
 		frm.set_query('dt', 'triggers', (doc) => {
 			return {
 				'filters': {
-					'istable': 0, 
-					'issingle': 0, 
+					'istable': ["!=", 1], 
+					'issingle':["!=", 1], 
 					'module': ['!=', 'Core']
 				}
 			}

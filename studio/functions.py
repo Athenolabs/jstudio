@@ -1,5 +1,6 @@
 #-*- coding: utf-8 -*-
 
+import six
 import frappe
 import requests
 import inspect
@@ -23,17 +24,59 @@ def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
 def user():
 	return getattr(frappe.local, "session", None) and frappe.local.session.user or "Guest"
 
-def get_value(*args, **kwargs):
-	return frappe.db.get_value(*args, **kwargs)
+def get_value(dt, kwargs):
+	return frappe.db.get_value(dt, **kwargs)
 
-def exists(*args, **kwargs):
-	return frappe.db.exists(*args, **kwargs)
+def exists(dt, kwargs):
+	return frappe.db.exists(dt, **kwargs)
 
-def count(*args, **kwargs):
-	return frappe.db.count(*args, **kwargs)
+def count(dt, kwargs):
+	return frappe.db.count(dt, **kwargs)
 
 def form_dict():
 	return frappe.local.form_dict
+
+def get_report_data(report_name, filters={}):
+	from api import query_report_run
+	data = query_report_run(report_name, filters)
+	columns = map(frappe.scrub, [r.split(':')[0] for r in ref_doc['columns']])
+	data = map(dict, [zip(columns, json.loads(frappe.as_json(row))) for row in data['result'] if not("'Total'" in data)])
+	return data
+
+def filter_dict(dicts, filters):
+	ret = []
+	if isinstance(filters, six.string_types):
+		return [dict.get(filters)]
+	for item in dicts:
+		append = False
+		for k, v in filters.items():
+			if isinstance(v, list):
+				if (k not in item):
+					continue
+				elif v[0] == 'in' and v[1] not in item.get(k, []):
+					continue
+				elif v[0] == 'not in' and v[1] in item.get(k, []):
+					continue
+				elif v[0] == '<' and v[1] >= item.get(k, 0.0):
+					continue
+				elif v[0] == '>' and v[1] <= item.get(k, 0.0):
+					continue
+				elif v[0] == '>=' and v[1] < item.get(k, 0.0):
+					continue
+				elif v[0] == '<=' and v[1] > item.get(k, 0.0):
+					continue
+				elif v[0] in ('!=', '<>', '!==') and v[0] == item.get(k):
+					continue
+				elif v[0] in ('=', '==', '===') and v[0] != item.get(k):
+					continue
+				elif v[0] == 'between' and (v[1] < item.get(k) or v[2] > item.get(k)):
+					continue
+			elif (k not in item or v != item[k]):
+				continue
+			append = True
+		if append:
+			ret.append(item)
+	return ret		
 
 def web(method, url, kwargs={}):
 	res = {}

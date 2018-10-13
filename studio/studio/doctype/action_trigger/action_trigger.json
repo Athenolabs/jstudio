@@ -1,5 +1,6 @@
 {
  "allow_copy": 0, 
+ "allow_events_in_timeline": 0, 
  "allow_guest_to_view": 0, 
  "allow_import": 0, 
  "allow_rename": 0, 
@@ -53,7 +54,7 @@
    "collapsible": 0, 
    "columns": 0, 
    "fieldname": "event", 
-   "fieldtype": "Select", 
+   "fieldtype": "Data", 
    "hidden": 0, 
    "ignore_user_permissions": 0, 
    "ignore_xss_filter": 0, 
@@ -64,7 +65,7 @@
    "label": "Event", 
    "length": 0, 
    "no_copy": 0, 
-   "options": "\nOn Load\nOn Validate\nOn Insert\nOn Update\nOn Delete\nOn Submit\nOn Cancel\nOn Field Changed\n", 
+   "options": "", 
    "permlevel": 0, 
    "precision": "", 
    "print_hide": 0, 
@@ -121,7 +122,7 @@
  "issingle": 0, 
  "istable": 1, 
  "max_attachments": 0, 
- "modified": "2018-08-02 17:45:46.374843", 
+ "modified": "2018-10-12 11:18:15.771859", 
  "modified_by": "Administrator", 
  "module": "Studio", 
  "name": "Action Trigger", 
@@ -135,5 +136,6 @@
  "sort_field": "modified", 
  "sort_order": "DESC", 
  "track_changes": 1, 
- "track_seen": 0
+ "track_seen": 0, 
+ "track_views": 0
 }

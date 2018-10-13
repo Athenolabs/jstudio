@@ -131,13 +131,15 @@ doc_events = {
 # ------------------------------
 #
 override_whitelisted_methods = {
- 	'frappe.desk.query_report.run': 'studio.api.query_report_run'
+ 	'frappe.desk.query_report.run': 'studio.api.query_report_run',
+	'frappe.desk.query_report.export_query': 'studio.api.export_query_report'
 }
 
 studio_functions = [
 	'frappe._',
 	'frappe.as_json',
 	'frappe.msgprint',
+	{'frappe.get_report_data': 'studio.functions.get_report_data'},
 	{'frappe.call': 'studio.functions.call'},
 	{'frappe.db.get_value': 'studio.functions.get_value'},
 	{'frappe.db.exists': 'studio.functions.exists'},
@@ -161,6 +163,7 @@ studio_functions = [
 	{'frappe.model.bulk_update': 'frappe.client.bulk_update'},
 	{'frappe.model.has_permission': 'frappe.client.has_permission'},
 	'frappe.utils',
+	{'frappe.utils.filter_dict': 'studio.functions.filter_dict'},
 	{'frappe.get_url': 'frappe.utils.get_url'},
 	{'frappe.api_client': 'frappe.frappeclient'},
 	{'frappe.web': 'studio.functions.web'},
@@ -169,8 +172,6 @@ studio_functions = [
 	'frappe.get_hooks',
 	{'frappe.get_doc': 'studio.functions.get_doc'},
 	'frappe.new_doc',
-	'frappe.get_list',
-	'frappe.get_all',
 	{'frappe.attach_file': 'frappe.client.attach_file'},
 	{'frappe.user': 'studio.functions.user'},
 	{'frappe.get_fullname': 'frappe.utils.get_fullname'},
