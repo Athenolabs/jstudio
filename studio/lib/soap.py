@@ -35,10 +35,11 @@ class Service(object):
 	because types are almost completely ignored
 	'''
 
-	def __init__(self, wsdl, headers=None):
+	def __init__(self, wsdl, headers=None, with_namespaces=True):
 		self.operations = {}
 
 		self.wsdl_path = wsdl
+		self.with_namespaces = with_namespaces
 		self._load_wsdl(self.wsdl_path)
 		if headers:
 			self.add_headers_to_all(headers)
@@ -59,19 +60,27 @@ class Service(object):
 		Parse information about the WSDL services
 		"""
 
-		services = self.wsdl.getElementsByTagName('wsdl:service')
+		services = self.wsdl.getElementsByTagName('{0}service'.format(
+			'' if not self.with_namespaces else 'wsdl:'))
 		for service in services:
 			self.get_ports(service, ns)
 
 	def get_ports(self, service, ns):
-		ports = service.getElementsByTagName('wsdl:port')
+		ports = service.getElementsByTagName('{0}port'.format(
+			'' if not self.with_namespaces else 'wsdl:'
+		))
 
 		for port in ports:
 			name = port.getAttribute('name')
 			binding = strip_ns(port.getAttribute('binding'))
 
-			address10 = port.getElementsByTagName('soap:address')
-			address12 = port.getElementsByTagName('soap12:address')
+			address10 = port.getElementsByTagName('{0}address'.format(
+				'' if not self.with_namespaces else 'soap:'
+			))
+			if self.with_namespaces:
+				address12 = port.getElementsByTagName('soap12:address')
+			else:
+				address12 = []
 
 			addresses = address10 + address12
 
@@ -85,18 +94,22 @@ class Service(object):
 			self.get_bindings(ns, port, binding, uri)
 
 	def get_bindings(self, ns, port, binding, uri):
-		bindings = self.wsdl.getElementsByTagName('wsdl:binding')
+		bindings = self.wsdl.getElementsByTagName('{0}binding'.format(
+			'' if not self.with_namespaces else 'wsdl:'
+		))
 
 		for bind in bindings:
 			if bind.getAttribute('name') == binding:
 				self.get_operations(ns, port, binding, uri, bind)
 
 	def get_operations(self, ns, port, binding, uri, bind):
-		operations = self.wsdl.getElementsByTagName('wsdl:operation')
+		operations = self.wsdl.getElementsByTagName('{0}operation'.format(
+			'' if not self.with_namespaces else 'wsdl:'
+		))
 
 		for operation in operations:
 			name = operation.getAttribute('name')
-			self.operations[name] = Operation(operation, ns, port, binding, uri)
+			self.operations[name] = Operation(operation, ns, port, binding, uri, self.with_namespaces)
 
 	def add_headers_to_all(self, headers):
 		for operation in self.operations.values():
@@ -114,7 +127,7 @@ class Service(object):
 
 
 class Operation(object):
-	def __init__(self, node, ns, port, binding, uri):
+	def __init__(self, node, ns, port, binding, uri, include_ns=True):
 		self._headers = {}
 		self._request_ns = {}
 
@@ -128,10 +141,16 @@ class Operation(object):
 		self.port = port
 		self.binding = binding
 		self.uri = uri
+		self.include_ns = include_ns
 
 		# get soap Action
-		operations10 = node.getElementsByTagName('soap:operation')
-		operations12 = node.getElementsByTagName('soap12:operation')
+		operations10 = node.getElementsByTagName('{0}operation'.format(
+			'' if not self.include_ns else 'soap:'
+		))
+		if self.include_ns
+			operations12 = node.getElementsByTagName('soap12:operation')
+		else:
+			operations12 = []
 
 		operations = operations10 + operations12
 
@@ -143,7 +162,9 @@ class Operation(object):
 		# get output node name, for finessing output a bit
 
 		self.response_node_name = ''
-		output = node.getElementsByTagName('wsdl:output')
+		output = node.getElementsByTagName('{0}output'.format(
+			'' if not self.include_ns else 'wsdl:'
+		))
 		if len(output) and output[0].hasAttribute('name'):
 			self.response_node_name = output[0].getAttribute('name')
 
@@ -171,7 +192,7 @@ class Operation(object):
 
 		implementation = minidom.getDOMImplementation()
 
-		self.request = implementation.createDocument(self.ns, 'soap:Envelope', None)
+		self.request = implementation.createDocument(self.ns, 'soapenv:Envelope', None)
 
 		set_doc_attr = self.request.documentElement.setAttribute
 
@@ -184,12 +205,12 @@ class Operation(object):
 
 		# create header
 		if len(self._headers):
-			header = self.request.createElementNS(ns.soap, 'soap:Header')
+			header = self.request.createElementNS(ns.soap, 'soapenv:Header')
 			self.add_literal(self.request, header, self._headers)
 			self.request.documentElement.appendChild(header)
 
 		# add body
-		body = self.request.createElementNS(NS.soap, 'soap:Body')
+		body = self.request.createElementNS(NS.soap, 'soapenv:Body')
 		self.request.documentElement.appendChild(body)
 
 		operation = self.request.createElement(self.name)
@@ -328,16 +349,16 @@ def strip_ns(str):
 
 
 
-def get_soap_client(url):
-	return Service(url)
+def get_soap_client(url, headers=None, include_ns=True):
+	return Service(url, headers or {}, include_ns)
 
 
-def get_soap_methods(url):
-	return get_soap_client(url).operations.keys()
+def get_soap_methods(url, headers=None, include_ns=True):
+	return get_soap_client(url, headers, include_ns).operations.keys()
 
-def call_soap_method(url, method, kwargs=None):
+def call_soap_method(url, method, kwargs=None, headers=None, include_ns=True):
 	kwargs = kwargs or {}
-	client = get_soap_client(url)
+	client = get_soap_client(url, headers, include_ns)
 	if method not in client.operations:
 		frappe.msgprint('Method {0} not found in {1}'.format(method, url))
 

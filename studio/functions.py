@@ -8,7 +8,7 @@ import datetime
 import json
 import cgi
 from frappe.utils import format_datetime
-from studio.lib import soap
+from .lib import soap
 
 def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
 	query = query.strip()
