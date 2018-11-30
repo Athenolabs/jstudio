@@ -200,7 +200,9 @@ studio_functions = [
 	{'frappe.user': 'studio.functions.user'},
 	{'frappe.get_fullname': 'frappe.utils.get_fullname'},
 	{'frappe.get_gravatar': 'frappe.utils.get_gravatar'},
-	'frappe.render_template'
+	'frappe.render_template',
+	{'frappe.soap.get_methods': 'studio.functions.ws_soap_get_methods'},
+	{'frappe.soap.call_method': 'studio.functions.ws_soap_call_method'}
 ]
 
 studio_library_path = [
