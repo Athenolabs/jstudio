@@ -76,7 +76,8 @@ class Service(object):
 
 			address10 = port.getElementsByTagName('{0}address'.format(
 				'' if not self.with_namespaces else 'soap:'
-			))
+			)) or port.getElementsByTagName('soap:address'):
+				
 			if self.with_namespaces:
 				address12 = port.getElementsByTagName('soap12:address')
 			else:
@@ -147,7 +148,7 @@ class Operation(object):
 		operations10 = node.getElementsByTagName('{0}operation'.format(
 			'' if not self.include_ns else 'soap:'
 		))
-		if self.include_ns
+		if self.include_ns:
 			operations12 = node.getElementsByTagName('soap12:operation')
 		else:
 			operations12 = []
