@@ -6,6 +6,7 @@ import requests
 import inspect
 import datetime
 import json
+import cgi
 from frappe.utils import format_datetime
 
 def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
@@ -92,7 +93,10 @@ def web(method, url, kwargs={}):
 				try:
 					res[k] = json.loads(res[k])
 				except ValueError:
-					pass
+					try:
+						res[k] = cgi.escape(res[k])
+					except ValueError:
+						pass
 			elif k == 'headers':
 				res[k] = dict(res[k])
 			elif hasattr(v, 'get_dict'): #Cookies

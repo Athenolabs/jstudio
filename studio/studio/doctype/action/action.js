@@ -70,6 +70,8 @@ frappe.ui.form.on('Action', {
 								},
 								'kwargs': {}
 							},
+							'callback': function(res){
+							},
 							'freeze': true,
 						});
 					} else {
