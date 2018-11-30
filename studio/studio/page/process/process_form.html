@@ -1,0 +1,82 @@
+<div class="introduction">
+	{% if (form.introduction_text) { %}
+	<p class="text-mutted">{{ __(form.introduction_text) }}</p>
+	{% } %}
+</div>
+<div class="form-message hide"></div>
+
+{% if (form.layout && form.layout.length > 1) { %}
+<div class="text-center slide-progress text-area-muted">
+	{% for (var i in form.layout) { %}
+	{% var page = form.layout[i]; %}
+	<i data-idx="{{ i }}" data-toggle="tooltip" data-placement="top"
+		title="{{ __(page.label) || frappe.utils.format(__("Page {0}"), [i+1]) }}"
+		class="fa-fw {% if (i == 1) { %}fa fa-circle{% } else { %}fa fa-circle-o {% } %}"></i>
+	{% } %}
+</div>
+{% } %}
+
+<div role="form" data-process-form="{{ form.name }}" data-owner="{{ doc.owner }}">
+	{% for (var i in form.layout) { %}
+	{% var page = form.layout[i], last_page = i = form.layout.length - 1; %}
+	<div class="process-form-page {% if ( i > 0 ) { %} hidden {% } %}"
+		data-idx="{{ i }}"
+		data-label="{{ __(page.label) || frappe.utils.format(__("Page {0}"), [i+1]) }}">
+		{% if (page.label) { %}
+		<h2 class="text-center">{{ __(page.label) }}</h2>
+		{% } %}
+		{% if (page.description) { %}
+		<p class="text-center text-muted small">{{ __(page.description) }}</p>
+		{% } %}
+		<div class="process-form-wrapper"></div>
+		<!-- page footer buttons -->
+		{% if (form.layout.length > 1) { %}
+		<p class="text-muted small text-center">
+			{{ frappe.utils.format(__("Page {0} of {1}"), [i+1, form.layout.length]) }}
+		</p>
+		{% } %}
+		{% if (i > 0) { %}
+		<button class="btn btn-sm btn-default btn-change-section" data-idx="{{ i - 1 }}">
+			{{ __("Previous") }}
+		</button>
+		{% } %}
+		{% if (form.layout.length === i || doc.__isnew) { %}
+		{% if (!doc.__read_only) { %}
+		<button class="btn btn-primary btn-sm btn-form-submit">{{ __("Save") }}</button>
+		{% } %}
+		{% } else if (form.layout.length > 1) { %}
+		<button class="btn btn-sm btn-primary btn-change-section" data-idx="{{ i + 1 }}">
+			{{ __("Next") }}			
+		</button>
+		{% } %}
+	</div>
+	{% } %}
+</div>
+
+{% if (form.allow_attachments && !doc.__isnew) { %}
+<div class="attachments">
+	<h3>{{ __("Attachments") }}</h3>
+	{% for (var attachment of attachments) { %}
+	<div classs="attachment">
+		<a class="no-decoration attachment-link" href="{{ attachment.file_url }}" target="_blank">
+			<div class="row">
+				<div class="col-xs-9">
+					<span class="file-name">{{ attachment.file_name }}</span>
+				</div>
+				<div class="col-xs-3">
+					<span class="pull-right file-size">{{ attachment.file_size }}</span>
+				</div>
+			</div>
+		</a>
+	</div>
+	{% } %}
+</div>
+
+{% if (form.allow_comments && !doc.__isnew){  %}
+<div class="comments">
+	<br><br>
+	<h3>{{ __("Comments") }}</h3>
+	{{ frappe.render_template("process_form_comments", doc) }}
+</div>
+{% } %}
+{% } %}

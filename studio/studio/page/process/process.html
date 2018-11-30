@@ -1,0 +1,103 @@
+{% if (!process) { %}
+<ul>
+	{% for (var process of process_list) { %}
+	<li><a href="#" class="view-process" data-process="{{ process.name }}">{{ process.title }}</a></li>
+	{% } %}
+</ul>
+{% } else { %}
+<div class="row">
+	<div class="col-md-10">
+		<h6><strong>{{ process.title }}</strong></h6>
+		{% if (process.description) { %}
+		<h6><i>{{ process.description}} </i></h6>
+		{% } %}
+	</div>
+	<div class="col-md-2">
+		<a href="#" class="btn btn-primary btn-start-request pull-right">
+			<span class="glyphicon glyphicon-edit"></span> {{ __("Initiate Request") }}
+		</a>
+	</div>
+</div>
+{% if (requests) { %}
+<table class="table table-bordered" style="margin: 0px;">
+	<thead>
+		<tr>
+			<th><span class="glyphicon glyphicon-menu-hamburger"></span></th>
+			<th>{{ __("ID") }}</th>
+			<th>{{ __("Status") }}</th>
+			<th>{{ __("Requester") }}</th>
+			<th>{{ __("Subject") }}</th>
+			<th>{{ __("Created") }}</th>
+			<th>{{ __("Last Modified") }}</th>
+		</tr>
+	</thead>
+	<tbody>
+		{% for (var request of requests) { %}
+		<tr>
+			<td>
+				<button class="btn btn-xs" type="button" data-toggle="collapse" data-target="#{{ request.name }}">
+					{{ __("View Tasks") }} <span class="badge">{{ request.tasks.length }}</span>
+				</button>
+			</td>
+			<td>{{ request.name }}</td>
+			<td>{{ __(request.status) }}</td>
+			<td>{{ request.owner }}</td>
+			<td>{{ request.subject }}</td>
+			<td>{{ frappe.datetime.str_to_user(request.creation) }}</td>
+			<td>{{ frappe.datetime.str_to_user(request.modified) }}</td>
+		</tr>
+		{% if request.tasks.length %}
+		<tr id="{{ request.name }}" class="collapse">
+			<td colspan="7">
+				<table class="table table-bordered" style="margin: 0px;">
+					<thead>
+						<tr>
+							<th>{{ __("ID") }}</th>
+							<th>{{ __("Activity") }}</th>
+							<th>{{ __("Status") }}</th>
+							<th>{{ __("Assignee") }}</th>
+							<th>{{ __("Date Assigned") }}</th>
+							<th>{{ __("Last Updated") }}</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for (var task of request.tasks) { %}
+						<tr>
+							<td>{{ task.name }}</td>
+							<td>{{ task.activity }}</td>
+							<td>{{ __(task.status) }}</td>
+							<td>{{ task.assignee }}</td>
+							<td>{{ frappe.datetime.str_to_user(task.creation) }}</td>
+							<td>{{ frappe.datetime.str_to_user(task.modified) }}</td>
+							<td>
+								<a class="btn btn-xs {% if (!task.can_view_activity) { %} disabled {% } %} activity-view" href="#" data-request="{{ task.request }}" data-activity="{{ task.name }}">
+									<span class="glyphicon glyphicon-check"></span> {{ __("View") }}
+								</a>
+								<a class="btn btn-xs {% if (!task.can_initiate_activity) { %} disabled {% } %} activity-create" href="#" data-request="{{ task.request }}" data-activity="{{ task.name }}">
+									<span class="glyphicon glyphicon-pencil"></span> {{ __("Create") }}
+								</a>
+								<a class="btn btn-xs {% if (!task.can_revise_activity) { %} disabled {% } %} activity-review" href="#" data-request="{{ task.request }}" data-activity="{{ task.name }}">
+									<span class="glyphicon glyphicon-edit"></span> {{ __("Revise") }}
+								</a>
+								<a class="btn btn-xs {% if (!task.can_rollback) { %} disabled {% } %} activity-rollback" href="#" data-request="{{ task.request }}" data-activity="{{ task.name }}">
+									<span class="glyphicon glyphicon-repeat"></span> {{ __("Rollback") }}
+								</a>
+							</td>
+						</tr>
+						<tr id="form_{{ task.name }}" class="hidden">
+							<td colspan="7" class="form-wrapper"></td>
+						</tr>				
+						{% } %}
+					</tbody>
+				</table>
+			</td>
+		</tr>
+		{% } %}
+		{% } %}
+	</tbody>
+</table>
+{% } else { %}
+<p>{{ __("No requests are available") }}</p>
+{% } %}
+{% } %}

@@ -9,8 +9,13 @@ import json
 from frappe.utils import format_datetime
 
 def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
+	query = query.strip()
 	if not query or not query.lower().startswith('select'):
-		frappe.msgprint(_("Query must be a SELECT"), raise_exception=True)
+		frappe.msgprint(frappe._("Query must be a SELECT"))
+		return
+	elif query.split(';') > 1:
+		frappe.msgprint(frappe._('Only one statement is allowed per SQL call'))
+		return
 	return frappe.db.sql(
 		query=query,
 		values=values,

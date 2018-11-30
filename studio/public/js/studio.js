@@ -46,6 +46,7 @@ studio.inflate_args = function(frm, mappings, args){
 			}
 		}
 	});
+	return args;
 }
 
 frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
@@ -72,7 +73,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 										function(){
 											var with_dialog = !!(row.arguments && row.arguments.length),
 												fields = (row.arguments || []).map(function(a){
-													var ret = {
+													return {
 														'label': __(a.label),
 														'fieldtype': a.argtype,
 														'fieldname': a.argname,
@@ -81,7 +82,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 														'default': a.default,
 														'depends_on': a.depends_on,
 														'collapsible_when': a.collapsible_when
-													}
+													};
 												});
 											
 											if (!with_dialog){
@@ -103,7 +104,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 															'callback': function(res){
 																if (res.message && res.message.docs){
 																	frappe.model.sync(res.message);
-																	frm.refresh();
+																	cur_frm.refresh();
 																}
 															},
 														});
@@ -127,7 +128,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 															'callback': function(res){
 																if (res.message && res.message.docs){
 																	frappe.model.sync(res.message);
-																	frm.refresh();
+																	cur_frm.refresh();
 																}
 															},
 														});

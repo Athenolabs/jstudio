@@ -1,0 +1,27 @@
+{
+ "content": null, 
+ "creation": "2018-11-10 18:20:07.930325", 
+ "docstatus": 0, 
+ "doctype": "Page", 
+ "icon": "octicon octicon-circuit-board", 
+ "idx": 0, 
+ "modified": "2018-11-10 18:20:07.930325", 
+ "modified_by": "Administrator", 
+ "module": "Studio", 
+ "name": "process", 
+ "owner": "Administrator", 
+ "page_name": "Process", 
+ "roles": [
+  {
+   "role": "System Manager"
+  }, 
+  {
+   "role": "Administrator"
+  }
+ ], 
+ "script": null, 
+ "standard": "Yes", 
+ "style": null, 
+ "system_page": 0, 
+ "title": "Process"
+}

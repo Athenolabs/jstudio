@@ -1,0 +1,27 @@
+{
+ "content": null, 
+ "creation": "2018-10-14 19:28:28.389407", 
+ "docstatus": 0, 
+ "doctype": "Page", 
+ "icon": "fa fa-edit", 
+ "idx": 0, 
+ "modified": "2018-10-14 19:28:28.389407", 
+ "modified_by": "Administrator", 
+ "module": "Studio", 
+ "name": "reportbro", 
+ "owner": "Administrator", 
+ "page_name": "reportbro", 
+ "roles": [
+  {
+   "role": "Administrator"
+  }, 
+  {
+   "role": "System Manager"
+  }
+ ], 
+ "script": null, 
+ "standard": "Yes", 
+ "style": null, 
+ "system_page": 0, 
+ "title": "Reportbro"
+}

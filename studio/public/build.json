@@ -1,0 +1,14 @@
+{
+	"css/reportbro.min.css": [
+		"public/lib/reportbro/spectrum.min.css",
+		"public/lib/reportbro/reportbro.css"
+	],
+	"js/reportbro.min.js": [
+		"public/lib/reportbro/spectrum.min.js",
+		"public/lib/reportbro/JsBarcode.all.min.js",
+		"public/lib/reportbro/reportbro.min.js"
+	],
+	"js/studio.min.js": [
+		"public/js/studio.js"
+	]
+}

@@ -15,8 +15,14 @@ app_license = "MIT"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/studio/css/studio.css"
-app_include_js = "/assets/studio/js/studio.js"
+app_include_css = [
+	"assets/css/reportbro.min.css"
+]
+app_include_js = [
+	"assets/js/studio.min.js",
+	"assets/studio/lib/reportbro/autosize.min.js",
+	"assets/js/reportbro.min.js"
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/studio/css/studio.css"
@@ -166,7 +172,7 @@ studio_functions = [
 	{'frappe.model.get_list': 'frappe.client.get_list'},
 	{'frappe.model.get_count': 'frappe.client.get_count'},
 	{'frappe.model.count': 'frappe.client.get_count'},
-	{'frappe.model.get': 'frappe.client.get_value'},
+	{'frappe.model.get_doc': 'frappe.client.get'},
 	{'frappe.model.get_value': 'frappe.client.get_value'},
 	{'frappe.model.get_single_value': 'frappe.client.get_single_value'},
 	{'frappe.model.set_value': 'frappe.client.set_value'},
@@ -194,7 +200,7 @@ studio_functions = [
 	{'frappe.user': 'studio.functions.user'},
 	{'frappe.get_fullname': 'frappe.utils.get_fullname'},
 	{'frappe.get_gravatar': 'frappe.utils.get_gravatar'},
-	'frappe.render_template',
+	'frappe.render_template'
 ]
 
 studio_library_path = [
