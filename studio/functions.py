@@ -8,7 +8,6 @@ import datetime
 import json
 import cgi
 from frappe.utils import format_datetime
-from .lib import soap
 
 def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
 	query = query.strip()
@@ -130,10 +129,3 @@ def get_doc(*args, **kwargs):
 
 def call(method, arguments):
 	return json.loads(frappe.as_json(frappe.call(method, arguments)))
-
-
-def ws_soap_get_methods(url):
-	return soap.get_soap_methods(url)
-
-def ws_soap_call_method(url, method, kwargs=None):
-	return soap.call_soap_method(url, method, kwargs)

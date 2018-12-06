@@ -147,13 +147,24 @@ studio.process.ProcessForm = class Process {
 		const query_params = frappe.utils.get_query_params();
 
 		form.fields.map(df => {
-			if (df.fieldtype === 'Attach') {
-				df.is_private = true;
+			
+			if (df.fieldtype === 'Table') {
+				if (!Array.isArray(sdoc[df.fieldname])){
+					sdoc[df.fieldname] = [];
+				}
+				df.get_data = () => {
+					let data = [];
+					if (sdoc) {
+						data = sdoc[df.fieldname];
+					}
+					return data;
+				}
+				df.options = null;
 			}
 
-			// Set defaults
-			if (query_params && query_params['new'] === 1 && df.fieldname in query_params){
-				df.default = query_params[df.fieldname];
+
+			if (df.fieldtype === 'Attach') {
+				df.is_private = true;
 			}
 
 			delete df.parent;
@@ -181,7 +192,7 @@ studio.process.ProcessForm = class Process {
 			this.field_group.fields_list.forEach(field_instance => {
 				let instance_value = field_instance.value;
 				if (instance_value != null && field_instance.df.fieldtype === "Attach" && instance_value.match('.(?:jpg|gif|jpeg|png)')) {
-					field_instance.$input_wrapper.append(`<img src=${field_instance.get_value()} width="auto" height=200>`)
+					field_instance.$input_wrapper.append(`<img src="${field_instance.get_value()}" width="auto" height=200 />`)
 				}
 			});
 		}, 500);

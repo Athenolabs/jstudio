@@ -156,3 +156,36 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 		return handlers;
 	}
 });
+
+studio.AjaxComponent = class {
+	constructor(el, action, target, timeout, times) {
+		this.$element = $('#' + el);
+		this.element = this.$element[0],
+		this.stmt = frappe.utils.format('$("#{0}").get(0).reload()', [target]);
+		this.element.reload = () => {
+			/* Continue if times if Infinity or
+			 * the times limit is not reached
+			 */
+			if (this.element.reload_check()){
+				this.ajax_page(el, 'get', action, null);
+			}
+		}
+		/* Method to check timing limit */
+		this.element.reload_check = () => {
+			if (this.$element.hasClass('component_stop')){
+				clearInterval(this.timing);
+				return false;
+			}
+			if (this.reload_counter == Infinity){
+				return true;
+			} else {
+				if (!isNaN(this.reload_counter)){
+					this.reload_counter -= 1;
+					if (this.reload_counter < 0){
+						if 
+					}
+				}
+			}
+		} 
+	}
+}

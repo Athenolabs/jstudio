@@ -142,7 +142,7 @@ scheduler_events = {
 		"studio.tasks.monthly_long"
 	],
 	"yearly": [
-		"studio.tasks.monthly"
+		"studio.tasks.yearly"
 	]
 }
 
@@ -172,7 +172,6 @@ studio_functions = [
 	{'frappe.model.get_list': 'frappe.client.get_list'},
 	{'frappe.model.get_count': 'frappe.client.get_count'},
 	{'frappe.model.count': 'frappe.client.get_count'},
-	{'frappe.model.get_doc': 'frappe.client.get'},
 	{'frappe.model.get_value': 'frappe.client.get_value'},
 	{'frappe.model.get_single_value': 'frappe.client.get_single_value'},
 	{'frappe.model.set_value': 'frappe.client.set_value'},
@@ -194,15 +193,14 @@ studio_functions = [
 	'frappe.format_value',
 	{'frappe.form_dict': 'studio.functions.form_dict'},
 	'frappe.get_hooks',
-	{'frappe.get_doc': 'studio.functions.get_doc'},
+	{'frappe.model.get_doc': 'studio.functions.get_doc'},
 	'frappe.new_doc',
 	{'frappe.attach_file': 'frappe.client.attach_file'},
 	{'frappe.user': 'studio.functions.user'},
 	{'frappe.get_fullname': 'frappe.utils.get_fullname'},
 	{'frappe.get_gravatar': 'frappe.utils.get_gravatar'},
 	'frappe.render_template',
-	{'frappe.soap.get_methods': 'studio.functions.ws_soap_get_methods'},
-	{'frappe.soap.call_method': 'studio.functions.ws_soap_call_method'}
+	{'frappe.send_email': 'frappe.email.queue.send'}
 ]
 
 studio_library_path = [
