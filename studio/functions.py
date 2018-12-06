@@ -7,6 +7,7 @@ import inspect
 import datetime
 import json
 import cgi
+import xmltodict
 from frappe.utils import format_datetime
 
 def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
@@ -45,7 +46,7 @@ def form_dict():
 def get_report_data(report_name, filters={}):
 	from api import query_report_run
 	data = query_report_run(report_name, filters)
-	columns = map(frappe.scrub, [r.split(':')[0] for r in ref_doc['columns']])
+	columns = map(frappe.scrub, [r.split(':')[0] for r in data['columns']])
 	data = map(dict, [zip(columns, json.loads(frappe.as_json(row))) for row in data['result'] if not("'Total'" in data)])
 	return data
 
@@ -86,6 +87,8 @@ def filter_dict(dicts, filters):
 
 def web(method, url, kwargs={}):
 	res = {}
+	escape = kwargs.pop('escape', False)
+	as_json = kwargs.pop('as_json', False)
 	if hasattr(requests, method):
 		res.update(vars(getattr(requests, method)(url, **kwargs)))
 		for k, v in res.items():
@@ -94,7 +97,10 @@ def web(method, url, kwargs={}):
 					res[k] = json.loads(res[k])
 				except ValueError:
 					try:
-						res[k] = cgi.escape(res[k])
+						if as_json:
+							res[k] = xmltodict.parse(res[k])
+						elif escape:
+							res[k] = cgi.escape(res[k])
 					except ValueError:
 						pass
 			elif k == 'headers':
@@ -129,3 +135,9 @@ def get_doc(*args, **kwargs):
 
 def call(method, arguments):
 	return json.loads(frappe.as_json(frappe.call(method, arguments)))
+
+def xml_to_dict(xml, kwargs={}):
+	return xmltodict.parse(xml, **kwargs)
+
+def dict_to_xml(obj, kwargs={}):
+	return xmltodict.unparse(obj, **kwargs)

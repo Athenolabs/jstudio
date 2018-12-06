@@ -187,6 +187,8 @@ studio_functions = [
 	{'frappe.model.has_permission': 'frappe.client.has_permission'},
 	'frappe.utils',
 	{'frappe.utils.filter_dict': 'studio.functions.filter_dict'},
+	{'frappe.utils.xml_to_dict': 'studio.functions.xml_to_dict'},
+	{'frappe.utils.dict_to_xml': 'studio.functions.dict_to_xml'},
 	{'frappe.get_url': 'frappe.utils.get_url'},
 	{'frappe.api_client': 'frappe.frappeclient'},
 	{'frappe.web': 'studio.functions.web'},
