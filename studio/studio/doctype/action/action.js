@@ -49,12 +49,12 @@ frappe.ui.form.on('Action', {
 					if (frm.doc.arguments.length){
 						var with_dialog = true,
 							fields = frm.doc.arguments.map((f) => {
-								return {
-									'label': __(f.label),
-									'fieldtype': f.argtype,
-									'fieldname': __(f.argname),
-									'reqd': f.required
-								}
+								var ret = {};
+								Object.assign(ret, f);
+								delete ret.parentfield;
+								delete ret.parent;
+								delete ret.parenttype;
+								return ret;
 							});
 					} else {
 						var with_dialog = false;
