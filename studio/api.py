@@ -134,8 +134,9 @@ class JSInterpreter(JSInterpreter):
 
 		args = json.loads(json_args)[0]
 		ret = self._funcs[func](*args)
+		print((func, args, ret))
 		if ret is not None:
-			return json.dumps(ret).encode('utf-8')
+			return frappe.as_json(ret).encode('utf-8')
 
 
 def evaluate_js(js, context={}, kwargs={}, default_context=True, context_processor=None):
@@ -188,9 +189,21 @@ def run_action(action, context={}, kwargs={}):
 	delete dukpy;
 	""", context=context, kwargs=kwargs, doc=doc)
 
-	ret = jsi.evaljs(frappe.db.get_value('Action', action, 'code'))
+	code = """try {{
+		{code}
+	}} catch (e) {{
+		ctx.err = true;
+		frappe.ui.msgprint([
+			frappe._("JS Engine Error:"),
+			"<pre>" + e.stack + "</pre>" 
+		].join("<br/>"));
+	}}""".format(code=frappe.db.get_value('Action', action, 'code'))
+
+	ret = jsi.evaljs(code)
 	new_ctx, new_doc = jsi.evaljs('[ctx, doc];')
 	if new_ctx.get('enabled_document_syncronization'):
+		if not new_ctx.get("err", False): 
+			frappe.db.commit()
 		return {
 			'docs': [json.loads(frappe.get_doc(new_doc).as_json())]
 		}
@@ -381,6 +394,10 @@ def get_action_list(dt):
 	)
 
 	for action in actions:
+		action['details'] = dict(zip(('dialog_title', 'primary_button_label', 'cancel_button_label'), frappe.db.get_value(
+			'Action', action.parent,
+			['dialog_title', 'primary_button_label', 'cancel_button_label']
+		)))
 		action['arguments'] = frappe.get_all(
 			'Action Argument',
 			fields=['label', 'argtype', 'argname', 'required', 'collapsible', 

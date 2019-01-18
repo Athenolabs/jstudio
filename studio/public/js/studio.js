@@ -27,22 +27,22 @@ studio.evaluate_value_processor = function(processor, doc){
 	return (new Function('doc', frappe.utils.format('try { return {0} } catch(e) { void 0; }')))
 }
 
-studio.inflate_args = function(frm, mappings, args){
+studio.inflate_args = function(doc, mappings, args){
 	(mappings || []).forEach(function(m){
-		if (m.field.indexOf('.') === -1 && typeof(args[mappings]) === 'undefined' && typeof (frm.doc[m.field])!== 'undefined'){
+		if (m.fieldname.indexOf('.') === -1 && typeof(args[m.fieldname]) === 'undefined' && typeof (doc[m.fieldname]) !== undefined){
 			if (m.value_processor){
-				args[m.argument] = studio.evaluate_value_processor(m.value_processor, frm.doc);
+				args[m.argument] = studio.evaluate_value_processor(m.value_processor, doc);
 			} else {
-				args[m.argument] = frm.doc[m.fieldname];
+				args[m.argument] = doc[m.fieldname];
 			}
-		} else if (m.field.indexOf('.') > 0 ){
-			var parts = m.field.split('.');
+		} else if (m.fieldname.indexOf('.') > 0 ){
+			var parts = m.fieldname.split('.');
 			if (!m.value_processor){
-				args[m.argument] = frm.doc[parts[0]].map(function(r){
+				args[m.argument] = doc[parts[0]].map(function(r){
 					return r[parts[1]];
 				});
 			} else {
-				args[m.field] = studio.evaluate_value_processor(m.value_processor, frm.doc);
+				args[m.fieldname] = studio.evaluate_value_processor(m.value_processor, doc);
 			}
 		}
 	});
@@ -74,7 +74,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 											var with_dialog = !!(row.arguments && row.arguments.length),
 												fields = (row.arguments || []).map(function(a){
 													return {
-														'label': __(a.label),
+														'label': a.argtype !== "Column Break" ? __(a.label) : null,
 														'fieldtype': a.argtype,
 														'fieldname': a.argname,
 														'reqd': a.required,
@@ -90,7 +90,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 													frappe.utils.format(__('You want to call the action {0} ?'), [__(row.menu_label)]),
 													function(){
 														var args = {};
-														studio.inflate_args(cur_frm.doc, res.message['mappings'], args);
+														studio.inflate_args(cur_frm.doc, row['mappings'], args);
 														frappe.call({
 															'method': 'studio.api.run_action',
 															'args': {
@@ -101,9 +101,9 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 																'kwargs': args
 															},
 															freeze: true,
-															'callback': function(res){
-																if (res.message && res.message.docs){
-																	frappe.model.sync(res.message);
+															'callback': function(r){
+																if (r.message && r.message.docs){
+																	frappe.model.sync(r.message);
 																	cur_frm.refresh();
 																}
 															},
@@ -114,7 +114,7 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 												var d = frappe.prompt(
 													fields,
 													function(args){
-														studio.inflate_args(cur_frm.doc, res.message['mappings'], args);
+														studio.inflate_args(cur_frm.doc, row['mappings'], args);
 														frappe.call({
 															'method': 'studio.api.run_action',
 															'args': {
@@ -125,9 +125,9 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 																'kwargs': args
 															},
 															freeze: true,
-															'callback': function(res){
-																if (res.message && res.message.docs){
-																	frappe.model.sync(res.message);
+															'callback': function(r){
+																if (r.message && r.message.docs){
+																	frappe.model.sync(r.message);
 																	cur_frm.refresh();
 																}
 															},
@@ -135,7 +135,12 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 														frappe.utils.format(__('Run Action {0}'), [row.menu_label]),
 														__('Run')
 													}
-												), props = studio.inflate_args(cur_frm.doc, res.message['mappings'], {});
+												), props = studio.inflate_args(cur_frm.doc, row['mappings'], {});
+
+												row.details.dialog_title && d.set_title(row.details.dialog_title);
+												row.details.primary_button_label && d.get_primary_btn().html(row.primary_button_label);
+												row.details.cancel_button_label && d.get_close_btn().html(row.cancel_button_label);
+												
 												Object.keys(props).forEach(function(k){
 													var v = props[k];
 													if (!Array.isArray(v)){
@@ -157,35 +162,3 @@ frappe.ui.form.ScriptManager = frappe.ui.form.ScriptManager.extend({
 	}
 });
 
-studio.AjaxComponent = class {
-	constructor(el, action, target, timeout, times) {
-		this.$element = $('#' + el);
-		this.element = this.$element[0],
-		this.stmt = frappe.utils.format('$("#{0}").get(0).reload()', [target]);
-		this.element.reload = () => {
-			/* Continue if times if Infinity or
-			 * the times limit is not reached
-			 */
-			if (this.element.reload_check()){
-				this.ajax_page(el, 'get', action, null);
-			}
-		}
-		/* Method to check timing limit */
-		this.element.reload_check = () => {
-			if (this.$element.hasClass('component_stop')){
-				clearInterval(this.timing);
-				return false;
-			}
-			if (this.reload_counter == Infinity){
-				return true;
-			} else {
-				if (!isNaN(this.reload_counter)){
-					this.reload_counter -= 1;
-					if (this.reload_counter < 0){
-						if 
-					}
-				}
-			}
-		} 
-	}
-}

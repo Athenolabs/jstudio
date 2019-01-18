@@ -15,8 +15,8 @@ def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
 	if not query or not query.lower().startswith('select'):
 		frappe.msgprint(frappe._("Query must be a SELECT"))
 		return
-	elif query.split(';') > 1:
-		frappe.msgprint(frappe._('Only one statement is allowed per SQL call'))
+	elif len(query.split(';')) > 1:
+		frappe.msgprint(frappe._('Only one statement is allowed per SQL call, not {0}').format(len(query.split(";"))))
 		return
 	return frappe.db.sql(
 		query=query,
@@ -28,6 +28,9 @@ def run_sql(query, values=(), as_dict=0, as_list=0, formatted=0, as_utf8=0):
 		auto_commit=0,
 	)
 
+def get_all(dt, kwargs):
+	return frappe.get_all(dt, **kwargs)
+
 def user():
 	return getattr(frappe.local, "session", None) and frappe.local.session.user or "Guest"
 
@@ -35,7 +38,7 @@ def get_value(dt, kwargs):
 	return frappe.db.get_value(dt, **kwargs)
 
 def exists(dt, kwargs):
-	return frappe.db.exists(dt, **kwargs)
+	return frappe.db.exists(dt, kwargs, False)
 
 def count(dt, kwargs):
 	return frappe.db.count(dt, **kwargs)
@@ -133,11 +136,34 @@ def web(method, url, kwargs={}):
 def get_doc(*args, **kwargs):
 	return json.loads(frappe.get_doc(*args, **kwargs).as_json())
 
-def call(method, arguments):
-	return json.loads(frappe.as_json(frappe.call(method, arguments)))
+def call(method, args=(), kwargs={}):
+	return json.loads(frappe.as_json(frappe.call(method, *args, **kwargs)))
 
 def xml_to_dict(xml, kwargs={}):
 	return xmltodict.parse(xml, **kwargs)
 
 def dict_to_xml(obj, kwargs={}):
 	return xmltodict.unparse(obj, **kwargs)
+
+def uuid():
+	import uuid
+	return uuid.uuid4()
+
+def get_password(doctype, name, fieldname):
+	return frappe.get_doc(doctype, name).get_password(fieldname)
+
+
+def ui_refresh(doctype, docname):
+	js = """
+	if (cur_frm && cur_frm.doctype === "{}" && cur_frm.docname === "{}"){
+		cur_frm.trigger("refresh");
+	}
+	""".format(doctype, docname)
+	frappe.emit_js(js)
+
+def ui_trigger(event, cdt, cdn):
+	js = """
+	if (cur_frm) {
+		cur_frm.script_manager.trigger("{}", "{}", "{}");
+	}""".format(event, cdt, cdn)
+	frappe.emit_js(js)

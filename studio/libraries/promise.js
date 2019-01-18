@@ -138,7 +138,7 @@
 				// return a promise which reject with reason
 				// reason must be an instance of Error object
 				reject: function(reason){
-					if (!(reason instanceof Error)) throw Error('reason must be an instance of Error.'));
+					if (!(reason instanceof Error)) throw Error('reason must be an instance of Error.');
 					var p = PromiseA();
 					p.reject(reason);
 					return p;

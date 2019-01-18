@@ -6,10 +6,12 @@ __version__ = '0.0.1'
 import frappe
 import json
 import frappe.api
+from frappe import _
 from frappe.utils import response
 from frappe.model.document import Document
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, cstr
+from frappe.desk import query_report
 
 def document_hook(f):
 	"""Decorator: Make method `hookable` (i.e. extensible by another app).
@@ -199,5 +201,61 @@ def handle():
 
 	return frappe.api.build_response("json")
 
+def generate_report_result(report, filters=None, user=None):
+	status = None
+	if not user:
+		user = frappe.session.user
+	if not filters:
+		filters = []
+
+	if filters and isinstance(filters, query_report.string_types):
+		filters = json.loads(filters)
+	columns, result, message, chart, data_to_be_printed = [], [], None, None, None
+	if report.report_type == "Query Report":
+		if not report.query:
+			status = "error"
+			frappe.msgprint(_("Must specify a Query to run"), raise_exception=True)
+
+		if not report.query.lower().startswith("select"):
+			status = "error"
+			frappe.msgprint(_("Query must be a SELECT"), raise_exception=True)
+
+		result = [list(t) for t in frappe.db.sql(report.query, filters)]
+		columns = [cstr(c[0]) for c in frappe.db.get_description()]
+	else:
+		module = report.module or frappe.db.get_value("DocType", report.ref_doctype, "module")
+		if report.is_standard == "Yes":
+			method_name = query_report.get_report_module_dotted_path(module, report.name) + ".execute"
+			res = []
+
+			# The JOB
+			res = frappe.get_attr(method_name)(frappe._dict(filters))
+
+			columns, result = res[0], res[1]
+			if len(res) > 2:
+				message = res[2]
+			if len(res) > 3:
+				chart = res[3]
+			if len(res) > 4:
+				data_to_be_printed = res[4]
+
+	if result:
+		result = query_report.get_filtered_data(report.ref_doctype, columns, result, user)
+
+	if cint(report.add_total_row) and result:
+		result = query_report.add_total_row(result, columns)
+
+	return {
+		"result": result,
+		"columns": columns,
+		"message": message,
+		"chart": chart,
+		"data_to_be_printed": data_to_be_printed,
+		"status": status
+	}
+
+
+
 Document.hook = staticmethod(document_hook)
 frappe.api.handle = handle
+query_report.generate_report_result = generate_report_result

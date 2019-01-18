@@ -48,17 +48,46 @@ frappe.ui.form.on('Action', {
 				() => {
 					if (frm.doc.arguments.length){
 						var with_dialog = true,
-							fields = frm.doc.arguments.map((f) => {
-								return {
-									'label': __(f.label),
-									'fieldtype': f.argtype,
-									'fieldname': __(f.argname),
-									'reqd': f.required,
-									'options': f.options,
-									'default': f.default,
-									'depends_on': f.depends_on
+							bindable = [null],
+							fields = [];
+						if (Array.isArray(frm.doc.bindings) && frm.doc.bindings.length){
+							fields.push({
+								'label': __('Select one Record to Bind'),
+								'fieldtype': 'Section Break'
+							});
+							frm.doc.bindings.forEach(function(bind){
+								if (bind.dt && !bindable.includes(bind.dt)){
+									bindable.push(bind.dt);
 								}
 							});
+							fields.push({
+								'label': __('DocType to Bind'),
+								'fieldname': 'bind_doctype',
+								'fieldtype': 'Select',
+								'options': bindable,
+								'reqd': 1
+							});
+							fields.push({'fieldtype': 'Column Break'})
+							fields.push({
+								'label': __('ID to Bind'),
+								'fieldname': 'bind_docname',
+								'fieldtype': 'Dynamic Link',
+								'options': 'bind_doctype',
+								'reqd': 1
+							});
+							Array.isArray(frm.doc.arguments) && frm.doc.arguments.length && frm.doc.arguments[0].argtype !== "Section Break" && fields.push({'fieldtype': 'Section Break'});
+						}
+						fields = fields.concat(frm.doc.arguments.map((f) => {
+							return {
+								'label': f.argtype !== "Column Break" ? __(f.label) : null,
+								'fieldtype': f.argtype,
+								'fieldname': __(f.argname),
+								'reqd': f.required,
+								'options': f.options,
+								'default': f.default,
+								'depends_on': f.depends_on
+							}
+						}));
 					} else {
 						var with_dialog = false;
 					}
@@ -81,16 +110,20 @@ frappe.ui.form.on('Action', {
 						frappe.prompt(
 							fields,
 							(kwargs) => {
-								frappe.call({
-									'method': 'studio.api.run_action',
-									'args': {
-										'action': frm.doc.name,
-										'context': {
-											'doc': frm.doc
+								frappe.model.with_doc(kwargs.bind_doctype, kwargs.bind_name, function(name, _r){
+									delete kwargs.bind_doctype;
+									delete kwargs.bind_docname;
+									frappe.call({
+										'method': 'studio.api.run_action',
+										'args': {
+											'action': frm.doc.name,
+											'context': {
+												'doc': frm.doc
+											},
+											'kwargs': kwargs
 										},
-										'kwargs': kwargs
-									},
-									'freeze': true
+										'freeze': true
+									});
 								});
 							},
 							__('Run Action'),
