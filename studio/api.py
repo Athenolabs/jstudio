@@ -381,7 +381,7 @@ def get_field_options(doctype):
 	], key=lambda f: f['label'])
 
 
-def run_event(doc, event):
+def run_event(doc, event, *args, **kwargs):
 	"""Method handler for any event"""
 	if not (frappe.flags.on_import or getattr(getattr(doc, 'flags', frappe._dict()), 'ignore_{}'.format(event), False)):
 		if isinstance(doc, six.string_types):
