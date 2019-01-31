@@ -163,8 +163,17 @@ def evaluate_js(js, context={}, kwargs={}, default_context=True, context_process
 	
 	if callable(context_processor):
 		context_processor(jsi)
+
+	code = """try {{
+		{code}
+	}} catch (e) {{
+		frappe.ui.msgprint([
+			frappe._("JS Engine Error:") + e.message ? " " + e.message :  "",
+			"<pre>" + e.stack + "</pre>"
+		].join("<br/>"));
+	}}""".format(code=js)
 	
-	return jsi.evaljs(js)
+	return jsi.evaljs(code)
 
 
 @frappe.whitelist()
@@ -173,7 +182,9 @@ def run_action(action, context={}, kwargs={}):
 		context = json.loads(context)
 	if context.get('doc'):
 		doc = context.pop('doc')
-		meta = frappe.get_meta(doc['doctype'])
+		meta = frappe.get_meta(doc.get('doctype'))
+		if hasattr(doc, 'as_json'):
+			doc = doc.as_json()
 		context['meta'] = json.loads(meta.as_json())
 	else:
 		doc = {}
@@ -194,7 +205,7 @@ def run_action(action, context={}, kwargs={}):
 	}} catch (e) {{
 		ctx.err = true;
 		frappe.ui.msgprint([
-			frappe._("JS Engine Error:"),
+			frappe._("JS Engine Error:") + e.message ? " " + e.message : "",
 			"<pre>" + e.stack + "</pre>" 
 		].join("<br/>"));
 	}}""".format(code=frappe.db.get_value('Action', action, 'code'))
@@ -204,6 +215,8 @@ def run_action(action, context={}, kwargs={}):
 	if new_ctx.get('enabled_document_syncronization'):
 		if not new_ctx.get("err", False): 
 			frappe.db.commit()
+		if isinstance(new_doc, six.string_types):
+			new_doc = json.loads(new_doc)
 		return {
 			'docs': [json.loads(frappe.get_doc(new_doc).as_json())]
 		}
@@ -377,15 +390,17 @@ def run_event(doc, event):
 		for action in frappe.get_all('Action Trigger', fields=['*'], filters={
 			'dt': doc.doctype,
 			'event': event_name}):
+			if cint(frappe.db.get_value('Action', action.parent, 'disabled')):
+				continue
 			if not action.run_when or evaluate_js(action.run_when, {'doc': doc}):
-				run_action(action, {'doc': doc, 'event': event_name})
+				run_action(action.parent, {'doc': doc, 'event': event_name})
 
 
 @frappe.whitelist()
 def get_action_list(dt):
 	actions = frappe.get_all(
 		"Action Form Binding", 
-		fields=["parent", "menu_label", "menu_group", "depends_on"],
+		fields=["parent", "menu_label", "menu_group", "depends_on", "on_arguments_process", "on_dialog_setup"],
 		filters={
 			'dt': dt
 		},
@@ -394,14 +409,25 @@ def get_action_list(dt):
 	)
 
 	for action in actions:
-		action['details'] = dict(zip(('dialog_title', 'primary_button_label', 'cancel_button_label'), frappe.db.get_value(
+		action['ctx'] = {}
+		on_setup = frappe.db.get_value('Action', action.parent, 'on_setup')
+
+		if on_setup:
+			res = evaluate_js(on_setup)
+			if isinstance(res, dict):
+				action['ctx'].update(res)
+
+		fields = ('dialog_title', 'primary_button_label', 'cancel_button_label',
+			'on_arguments_process', 'on_dialog_setup')
+
+		action['details'] = dict(zip(fields, frappe.db.get_value(
 			'Action', action.parent,
-			['dialog_title', 'primary_button_label', 'cancel_button_label']
+			fields
 		)))
 		action['arguments'] = frappe.get_all(
 			'Action Argument',
 			fields=['label', 'argtype', 'argname', 'required', 'collapsible', 
-					'collapsible_when', 'options', '`default`', 'depends_on'],
+					'collapsible_when', 'options', '`default`', 'depends_on', 'read_only', 'hidden'],
 			filters={
 				'parent': action.parent
 			},

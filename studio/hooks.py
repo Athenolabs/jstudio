@@ -87,23 +87,7 @@ app_include_js = [
 
 doc_events = {
  	"*": {
- 		"onload": "studio.api.run_event",
-		"before_naming": "studio.api.run_event",
-		"autoname": "studio.api.run_event",
-		"validate": "studio.api.run_event",
-		"before_save": "studio.api.run_event",
-		"after_save": "studio.api.run_event",
-		"before_insert": "studio.api.run_event",
-		"after_insert": "studio.api.run_event",
-		"before_submit": "studio.api.run_event",
-		"after_submit": "studio.api.run_event",
-		"on_update": "studio.api.run_event",
-		"on_submit": "studio.api.run_event",
-		"on_cancel": "studio.api.run_event",
-		"on_update_after_submit": "studio.api.run_event",
-		"on_change": "studio.api.run_event",
-		"on_trash": "studio.api.run_event",
-		"after_delete": "studio.api.run_event"
+ 		"*": "studio.api.run_event"
 	}
 }
 

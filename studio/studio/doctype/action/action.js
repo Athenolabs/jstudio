@@ -27,8 +27,7 @@ frappe.ui.form.on('Action', {
 				'filters': {
 					'istable': ["!=", 1], 
 					'issingle':["!=", 1], 
-					'module': ['!=', 'Core'],
-					'name': ['in', frm.doc.bindings.map(function(d){ return d.dt; })]
+					'module': ['!=', 'Core']
 				}
 			}
 		});

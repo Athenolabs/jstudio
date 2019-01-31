@@ -40,9 +40,10 @@ def document_hook(f):
 		hooks = []
 		method = f.__name__
 		doc_events = frappe.get_doc_hooks()
+
 		for handler in doc_events.get(self.doctype, {}).get(method, []) \
 			+ doc_events.get("*", {}).get(method, []) \
-			+ doc_events.get("*", {}).get(method, []):
+			+ doc_events.get("*", {}).get("*", []):
 			hooks.append(frappe.get_attr(handler))
 
 		composed = compose(f, *hooks)

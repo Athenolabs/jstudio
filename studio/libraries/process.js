@@ -49,7 +49,7 @@ var Emitter = Class.$extend({
 		return this;
 
 	}
-})
+});
 
 var ProcessDefinition = Class.extend({
 	__classvars__: {

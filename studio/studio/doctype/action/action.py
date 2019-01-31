@@ -10,7 +10,8 @@ from uuid import uuid4
 
 class Action(Document):
 	def autoname(self):
-		self.name = str(uuid4())
+		if not self.get('name'):
+			self.name = str(uuid4())
 		if self.allow_external_access:
 			self.external_url = get_url() + '/api/action/{0}'.format(self.name)
 
