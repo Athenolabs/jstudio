@@ -3,7 +3,7 @@
 from __future__ import unicode_literals, division, absolute_import, print_function
 
 import frappe
-from frappe.utils.error import create_error_snapshot
+from frappe.utils.error import make_error_snapshot
 from frappe.utils.background_jobs import enqueue
 from .api import evaluate_js, run_action
 
@@ -27,7 +27,7 @@ def _execute_actions(action_list, queue='default'):
 			if not action.execute_when or bool(evaluate_js(action.execute_when)):
 				_execute_action(action, queue)
 		except Exception as e:
-			create_error_snapshot(e)
+			make_error_snapshot(e)
 
 def all():
 	_execute_actions(_get_schedule_action_list({
