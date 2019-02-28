@@ -133,8 +133,9 @@ class JSInterpreter(JSInterpreter):
 		json_args = json_args.decode('utf-8')
 
 		args = json.loads(json_args)[0]
+		print(('call', func, args))
 		ret = self._funcs[func](*args)
-		print((func, args, ret))
+		print(('res', func, args, ret))
 		if ret is not None:
 			return frappe.as_json(ret).encode('utf-8')
 
@@ -184,7 +185,7 @@ def run_action(action, context={}, kwargs={}):
 		doc = context.pop('doc')
 		meta = frappe.get_meta(doc.get('doctype'))
 		if hasattr(doc, 'as_json'):
-			doc = doc.as_json()
+			doc = json.loads(doc.as_json())
 		context['meta'] = json.loads(meta.as_json())
 	else:
 		doc = {}
@@ -204,6 +205,8 @@ def run_action(action, context={}, kwargs={}):
 		{code}
 	}} catch (e) {{
 		ctx.err = true;
+		ctx.err_message = e.message;
+		ctx.err_stack = e.stack;
 		frappe.ui.msgprint([
 			frappe._("JS Engine Error:") + e.message ? " " + e.message : "",
 			"<pre>" + e.stack + "</pre>" 
@@ -215,6 +218,8 @@ def run_action(action, context={}, kwargs={}):
 	if new_ctx.get('enabled_document_syncronization'):
 		if not new_ctx.get("err", False): 
 			frappe.db.commit()
+		else:
+			raise Exception('{0}\n{1}'.format(new_ctx['err_message'], new_ctx['err_stack']))
 		if isinstance(new_doc, six.string_types):
 			new_doc = json.loads(new_doc)
 		return {
@@ -390,10 +395,9 @@ def run_event(doc, event, *args, **kwargs):
 	if not (frappe.flags.on_import or getattr(getattr(doc, 'flags', frappe._dict()), 'ignore_{}'.format(event), False)):
 		if isinstance(doc, six.string_types):
 			doc = json.loads(doc, object_pairs_hook=frappe._dict)
-		event_name = " ".join(event.split("_")).title()
 		for action in frappe.get_all('Action Trigger', fields=['*'], filters={
 			'dt': doc.doctype,
-			'event': event_name}):
+			'event': event}):
 			if cint(frappe.db.get_value('Action', action.parent, 'disabled')):
 				continue
 			when_args = kwargs.copy()
