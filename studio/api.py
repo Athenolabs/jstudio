@@ -383,6 +383,10 @@ def get_field_options(doctype):
 
 def run_event(doc, event, *args, **kwargs):
 	"""Method handler for any event"""
+
+	if args:
+		kwargs['args'] = args 
+
 	if not (frappe.flags.on_import or getattr(getattr(doc, 'flags', frappe._dict()), 'ignore_{}'.format(event), False)):
 		if isinstance(doc, six.string_types):
 			doc = json.loads(doc, object_pairs_hook=frappe._dict)
@@ -392,8 +396,12 @@ def run_event(doc, event, *args, **kwargs):
 			'event': event_name}):
 			if cint(frappe.db.get_value('Action', action.parent, 'disabled')):
 				continue
-			if not action.run_when or evaluate_js(action.run_when, {'doc': doc}):
-				run_action(action.parent, {'doc': doc, 'event': event_name})
+			when_args = kwargs.copy()
+			when_args.update({'doc': doc})
+			if not action.run_when or evaluate_js(action.run_when, when_args):
+				action_args = kwargs.copy()
+				action_args.update({'doc': doc, 'event': event_name})
+				run_action(action.parent, action_args)
 
 
 @frappe.whitelist()
