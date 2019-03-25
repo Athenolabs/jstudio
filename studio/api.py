@@ -147,6 +147,10 @@ def evaluate_js(js, context={}, kwargs={}, default_context=True, context_process
 		doc = context.pop('doc')
 	else:
 		doc = {}
+
+	if hasattr(doc, 'as_json'):
+		doc = json.loads(doc.as_json())
+
 	if isinstance(kwargs, six.string_types):
 		kwargs = json.loads(kwargs)
 
