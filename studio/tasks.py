@@ -16,9 +16,7 @@ def _execute_action(action, queue='default'):
 		run_action,
 		queue=queue,
 		job_name="Action: {}".format(action.name),
-		kwargs={
-			'action': action.name
-		}
+		action=action.name
 	)
 	
 def _execute_actions(action_list, queue='default'):

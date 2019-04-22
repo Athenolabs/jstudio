@@ -136,6 +136,23 @@ def web(method, url, kwargs={}):
 def get_doc(*args, **kwargs):
 	return json.loads(frappe.get_doc(*args, **kwargs).as_json())
 
+def update_or_insert(doctype, filters, doc):
+	docname = doc.get('name') or frappe.db.exists(doctype, filters)
+	if docname:
+		action = 'save'
+		obj = frappe.get_doc(doctype, docname)
+	else:
+		action = 'insert'
+		obj = frappe.new_doc(doctype).update(filters)
+
+	for k, v in doc.items():
+		if not obj.get('k') or obj.get('k') != v:
+			obj.update({k: v})
+
+	obj.run_method(action)
+	print((action, obj.get('name')))
+	return json.loads(obj.as_json())
+
 def call(method, args=(), kwargs={}):
 	return json.loads(frappe.as_json(frappe.call(method, *args, **kwargs)))
 
@@ -167,3 +184,7 @@ def ui_trigger(event, cdt, cdn):
 		cur_frm.script_manager.trigger("{}", "{}", "{}");
 	}""".format(event, cdt, cdn)
 	frappe.emit_js(js)
+
+
+def log(msg):
+	print(msg)

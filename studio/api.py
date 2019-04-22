@@ -133,9 +133,9 @@ class JSInterpreter(JSInterpreter):
 		json_args = json_args.decode('utf-8')
 
 		args = json.loads(json_args)[0]
-		print(('call', func, args))
+		#print(('call', func, args))
 		ret = self._funcs[func](*args)
-		print(('res', func, args, ret))
+		#print(('res', func, args, ret))
 		if ret is not None:
 			return frappe.as_json(ret).encode('utf-8')
 
@@ -219,12 +219,16 @@ def run_action(action, context={}, kwargs={}):
 		if not new_ctx.get("err", False): 
 			frappe.db.commit()
 		else:
-			raise Exception('{0}\n{1}'.format(new_ctx['err_message'], new_ctx['err_stack']))
+			raise Exception('Action: {0} - {1}\n{2}'.format(action, new_ctx['err_message'], new_ctx['err_stack']))
 		if isinstance(new_doc, six.string_types):
 			new_doc = json.loads(new_doc)
-		return {
-			'docs': [json.loads(frappe.get_doc(new_doc).as_json())]
-		}
+		try:
+			return {
+				'docs': [json.loads(frappe.get_doc(new_doc).as_json())]
+			}
+		except Exception:
+			# some times context dont embed new docs
+			pass
 	return new_doc, ret
 
 @frappe.whitelist()
