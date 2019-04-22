@@ -8,6 +8,30 @@
 		GRAPH_NODE = '\x00',
 		EDGE_KEY_DELIM = '\x01';
 
+	function union(arr1, arr2){
+		if ((arr1 == null) || (arr2 == null)){
+			return void 0;
+		}
+
+		var obj = {};
+
+		for (var i = arr1.length -1; i>=0; --i){
+			obj[arr1[i]] = arr1[i];
+		}
+
+		for (var i = arr2.length -1; i >= 0; --i){
+			obj[arr2[i]] = arr2[i];
+		}
+
+		var res = [];
+		for (var n in obj){
+			if (obj.hasOwnProperty(n)){
+				res.push(obj[n]);
+			}
+		}
+		return res;
+	}
+
 	return Class.extend({
 		__init__: function(opts){
 			this._is_directed = opts.directed || true;
@@ -179,6 +203,48 @@
 				return []
 			}
 		},
-		
+		predecessors: function(v){
+			var preds_v = this._preds[v];
+			if (preds_v){
+				return Object.keys(preds_v);
+			}
+		},
+		successors: function(v){
+			var sucs_v = this._sucs[v];
+			if (sucs_v){
+				return Object.keys(sucs_v);
+			}
+		},
+		neighbors: function(v){
+			var preds = this.predecessors(v);
+			if (preds){
+				return union(preds, this.successors(v));
+			}
+		},
+		is_leaf: function(v){
+			var neighbors;
+			if (this.is_directed()){
+				neighbors = this.successors(v);
+			} else {
+				neighbors = this.neighbors(v);
+			}
+			return neighbors.length === 0;
+		},
+		filter_nodes: function(filter){
+			var copy = Graph({
+				directed: this._is_directed,
+				multigraph: this._is_multigraph,
+				compound: this._is_compound
+			});
+			copy.set_graph(this.graph());
+
+			Object.keys(this._nodes).forEach(function(v){
+				if (filter(v)){
+					copy.set_node(v, this._nodes[v]);
+				}
+			}.bind(this));
+
+			Object.
+		}
 	});
 });
