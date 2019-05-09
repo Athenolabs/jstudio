@@ -412,7 +412,7 @@ def run_event(doc, event, *args, **kwargs):
 			when_args.update({'doc': doc})
 			if not action.run_when or evaluate_js(action.run_when, when_args):
 				action_args = kwargs.copy()
-				action_args.update({'doc': doc, 'event': event_name})
+				action_args.update({'doc': doc, 'event': event})
 				run_action(action.parent, action_args)
 
 
